@@ -24,8 +24,16 @@ App.views.ustawienia = (function () {
       '<div class="panel mb-16">' +
         '<h3 class="panel-title">Dane firmy (sprzedawca na fakturach)</h3>' +
         '<div class="form-grid">' +
+          '<div class="field col-span-2">' +
+            '<label for="f_nip">NIP <span class="muted small" style="font-weight:400;text-transform:none;letter-spacing:0">— pobierz dane firmy automatycznie</span></label>' +
+            '<div style="display:flex;gap:8px;align-items:stretch">' +
+              '<input class="input" id="f_nip" name="nip" type="text" value="' + U.esc(fi.nip || "") + '" placeholder="np. 6423186618" style="flex:1">' +
+              '<button type="button" class="btn btn-primary" id="btnGus" style="white-space:nowrap">' + ui.icons.search + 'Pobierz dane</button>' +
+            '</div>' +
+            '<div class="field-hint">Uzupełni nazwę, adres, REGON, KRS oraz numer konta z rejestru VAT (Ministerstwo Finansów).</div>' +
+            '<div class="field-err" data-err-for="nip"></div>' +
+          '</div>' +
           ui.field({ name: "nazwa", label: "Nazwa", value: fi.nazwa, required: true, span: 2 }) +
-          ui.field({ name: "nip", label: "NIP", value: fi.nip, hint: "Weryfikowany sumą kontrolną." }) +
           ui.field({ name: "regon", label: "REGON", value: fi.regon }) +
           ui.field({ name: "krs", label: "KRS", value: fi.krs }) +
           ui.field({ name: "www", label: "Strona WWW", value: fi.www }) +
@@ -87,6 +95,43 @@ App.views.ustawienia = (function () {
     document.getElementById("plikImport").addEventListener("change", importuj);
     document.getElementById("btnResetDemo").addEventListener("click", function () { resetDane(true); });
     document.getElementById("btnResetPusty").addEventListener("click", function () { resetDane(false); });
+
+    // --- Auto-pobieranie danych firmy po NIP (Biała lista MF) ---
+    const btnGus = document.getElementById("btnGus");
+    const nipInput = document.getElementById("f_nip");
+    function ustawPole(name, val, tylkoGdyPuste) {
+      const elp = document.querySelector('#formUst [name="' + name + '"]');
+      if (!elp || val == null || val === "") return;
+      if (tylkoGdyPuste && elp.value.trim()) return;
+      elp.value = val;
+    }
+    function pobierzGus() {
+      const errBox = document.querySelector('[data-err-for="nip"]');
+      if (errBox) errBox.textContent = "";
+      const staryHtml = btnGus.innerHTML;
+      btnGus.disabled = true; btnGus.textContent = "Pobieram…";
+      App.gus.pobierzPoNip(nipInput.value).then(function (dane) {
+        ustawPole("nazwa", dane.nazwa, true);
+        ustawPole("regon", dane.regon);
+        ustawPole("krs", dane.krs);
+        ustawPole("ulica", dane.ulica);
+        ustawPole("kod", dane.kod);
+        ustawPole("miasto", dane.miasto);
+        ustawPole("kraj", dane.kraj);
+        ustawPole("numerKonta", dane.kontoGlowne, true);
+        ui.toast("Pobrano dane firmy: " + dane.nazwa + (dane.statusVat ? " · status VAT: " + dane.statusVat : ""), "ok", "Uzupełniono");
+      }).catch(function (e) {
+        if (errBox) errBox.textContent = e.message || "Nie udało się pobrać danych.";
+        ui.toast(e.message || "Nie udało się pobrać danych.", "err", "Auto-pobieranie");
+      }).finally(function () {
+        btnGus.disabled = false; btnGus.innerHTML = staryHtml;
+      });
+    }
+    btnGus.addEventListener("click", pobierzGus);
+    nipInput.addEventListener("blur", function () {
+      const nazwaEl = document.querySelector('#formUst [name="nazwa"]');
+      if (nazwaEl && !nazwaEl.value.trim() && U.cleanNIP(nipInput.value).length === 10 && !/[A-Za-z]/.test(nipInput.value)) pobierzGus();
+    });
   }
 
   function zapisz(el) {

@@ -15,7 +15,9 @@ lokalnie w przeglądarce (localStorage), więc pozostają na Twoim komputerze.
 - **Zlecenia** — rejestr zleceń transportowych: trasa (załadunek/rozładunek), ładunek,
   pojazd i kierowca, fracht (sprzedaż/zakup/marża), statusy, wydruk zlecenia dla przewoźnika
   lub potwierdzenia dla klienta.
-- **Kontrahenci** — baza klientów i przewoźników (z walidacją NIP).
+- **Kontrahenci** — baza klientów i przewoźników (z walidacją NIP). **Auto‑pobieranie danych po NIP**
+  z rejestru VAT (Biała lista Ministerstwa Finansów) — wpisz NIP, kliknij „Pobierz dane", a nazwa
+  i adres uzupełnią się same. W *Ustawieniach* pobiera dodatkowo REGON, KRS i numer konta.
 - **Faktury** — wystawianie faktur VAT: jednym kliknięciem ze zlecenia albo ręcznie.
   Pozycje z automatycznym liczeniem netto / VAT / brutto, rozbicie na stawki VAT,
   kwota słownie, wydruk do PDF, oznaczanie jako opłacona.
@@ -68,6 +70,7 @@ js/
   store.js            warstwa danych (localStorage), numeracja, dane startowe
   ui.js               modale, powiadomienia, statusy, budowa formularzy
   print.js            szablony wydruku (faktura, zlecenie)
+  gus.js              auto-pobieranie danych firmy po NIP (API Białej listy MF)
   views_*.js          widoki: pulpit, kontrahenci, zlecenia, faktury, ustawienia
   app.js              router (hash) + inicjalizacja
 ```

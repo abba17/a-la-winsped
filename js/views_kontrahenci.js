@@ -106,9 +106,17 @@ App.views.kontrahenci = (function () {
     const body =
       '<form id="formKontrahent">' +
         '<div class="form-grid">' +
+          '<div class="field col-span-2">' +
+            '<label for="f_nip">NIP <span class="muted small" style="font-weight:400;text-transform:none;letter-spacing:0">— wpisz i pobierz dane automatycznie</span></label>' +
+            '<div style="display:flex;gap:8px;align-items:stretch">' +
+              '<input class="input" id="f_nip" name="nip" type="text" value="' + U.esc(k.nip || "") + '" placeholder="np. 5213003700" style="flex:1">' +
+              '<button type="button" class="btn btn-primary" id="btnGus" style="white-space:nowrap">' + ui.icons.search + 'Pobierz dane</button>' +
+            '</div>' +
+            '<div class="field-hint">Dla polskich firm nazwa i adres uzupełnią się z rejestru VAT (Ministerstwo Finansów). Dla firm z UE wpisz dane ręcznie.</div>' +
+            '<div class="field-err" data-err-for="nip"></div>' +
+          '</div>' +
           ui.field({ name: "nazwa", label: "Nazwa firmy", value: k.nazwa, required: true, span: 2, placeholder: "np. Alpha Logistics Sp. z o.o." }) +
           ui.field({ name: "typ", label: "Typ kontrahenta", value: k.typ, type: "select", options: TYPY }) +
-          ui.field({ name: "nip", label: "NIP", value: k.nip, placeholder: "np. 5213003700", hint: "Dla firm z UE można podać z prefiksem kraju (np. DE...)." }) +
           ui.field({ name: "ulica", label: "Ulica i nr", value: k.ulica, span: 2 }) +
           ui.field({ name: "kod", label: "Kod pocztowy", value: k.kod, placeholder: "00-000" }) +
           ui.field({ name: "miasto", label: "Miasto", value: k.miasto }) +
@@ -148,6 +156,42 @@ App.views.kontrahenci = (function () {
           ui.toast(edit ? "Zaktualizowano kontrahenta." : "Dodano kontrahenta.", "ok");
           close();
           App.router.reload();
+        });
+
+        // --- Auto-pobieranie danych firmy po NIP (Biała lista MF) ---
+        const nipInput = root.querySelector("#f_nip");
+        const btnGus = root.querySelector("#btnGus");
+        function ustaw(name, val, tylkoGdyPuste) {
+          const elp = root.querySelector('[name="' + name + '"]');
+          if (!elp || val == null || val === "") return;
+          if (tylkoGdyPuste && elp.value.trim()) return;
+          elp.value = val;
+        }
+        function pobierzGus() {
+          const errBox = root.querySelector('[data-err-for="nip"]');
+          if (errBox) errBox.textContent = "";
+          const staryHtml = btnGus.innerHTML;
+          btnGus.disabled = true; btnGus.textContent = "Pobieram…";
+          App.gus.pobierzPoNip(nipInput.value).then(function (dane) {
+            ustaw("nazwa", dane.nazwa, true);
+            ustaw("ulica", dane.ulica);
+            ustaw("kod", dane.kod);
+            ustaw("miasto", dane.miasto);
+            ustaw("kraj", dane.kraj);
+            ui.toast("Pobrano: " + dane.nazwa + (dane.statusVat ? " · status VAT: " + dane.statusVat : ""), "ok", "Dane uzupełnione");
+          }).catch(function (e) {
+            if (errBox) errBox.textContent = e.message || "Nie udało się pobrać danych.";
+            ui.toast(e.message || "Nie udało się pobrać danych.", "err", "Auto-pobieranie");
+          }).finally(function () {
+            btnGus.disabled = false; btnGus.innerHTML = staryHtml;
+          });
+        }
+        btnGus.addEventListener("click", pobierzGus);
+        nipInput.addEventListener("blur", function () {
+          const nazwaEl = root.querySelector('[name="nazwa"]');
+          if (nazwaEl && !nazwaEl.value.trim() && U.cleanNIP(nipInput.value).length === 10 && !/[A-Za-z]/.test(nipInput.value)) {
+            pobierzGus();
+          }
         });
       }
     });
