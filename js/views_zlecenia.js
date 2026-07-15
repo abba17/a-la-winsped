@@ -199,6 +199,8 @@ App.views.zlecenia = (function () {
     if (U.toNumber(d.fr_sprzedaz) <= 0) { ui.markError(form, "fr_sprzedaz", "Podaj kwotę frachtu (sprzedaż)."); bledy++; }
     if (bledy) { ui.toast("Uzupełnij zaznaczone pola.", "err", "Braki w formularzu"); return; }
 
+    const btnZ = document.getElementById("zapisz"); if (btnZ) btnZ.disabled = true; // blokada podwójnego zapisu
+
     const obj = Object.assign({}, z, {
       status: d.status,
       zleceniodawcaId: d.zleceniodawcaId,
@@ -213,7 +215,7 @@ App.views.zlecenia = (function () {
       warunki: { terminPlatnosci: U.toNumber(d.w_termin), sposobPlatnosci: d.w_sposob.trim(), uwagi: d.w_uwagi.trim() }
     });
 
-    if (!edit) obj.numer = store.nadajNumerZlecenia();
+    if (!edit) obj.numer = store.nadajNumerZlecenia(parseInt(String(obj.dataUtworzenia || "").slice(0, 4), 10));
     const zapisane = store.upsert("zlecenia", obj);
     ui.toast(edit ? "Zapisano zmiany w zleceniu." : "Utworzono zlecenie " + zapisane.numer + ".", "ok");
     location.hash = "#/zlecenia/" + zapisane.id;
@@ -241,7 +243,7 @@ App.views.zlecenia = (function () {
         (faktura ?
           '<a class="btn btn-primary" href="#/faktury/' + faktura.id + '">' + ui.icons.invoice + 'Pokaż fakturę</a>' :
           '<button class="btn btn-primary" id="btnFaktura">' + ui.icons.invoice + 'Wystaw fakturę</button>') +
-        '<button class="btn btn-danger" id="btnUsun">' + ui.icons.trash + '</button>' +
+        '<button class="btn btn-danger" id="btnUsun" title="Usuń zlecenie" aria-label="Usuń zlecenie">' + ui.icons.trash + '</button>' +
       '</div>';
 
     el.innerHTML =
@@ -370,6 +372,11 @@ App.views.zlecenia = (function () {
       confirm: "Usuń", danger: true
     }).then(function (ok) {
       if (!ok) return;
+      // Odepnij powiązaną fakturę, aby nie została z wiszącym zlecenieId
+      if (z.fakturaId) {
+        const f = store.get("faktury", z.fakturaId);
+        if (f && f.zlecenieId === z.id) { f.zlecenieId = null; store.upsert("faktury", f); }
+      }
       store.remove("zlecenia", z.id);
       ui.toast("Usunięto zlecenie.", "ok");
       location.hash = "#/zlecenia";

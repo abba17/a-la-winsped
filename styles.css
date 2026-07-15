@@ -293,6 +293,7 @@ textarea.input { resize: vertical; min-height: 70px; }
 }
 @media (max-width: 560px) {
   .kpi-grid { grid-template-columns: 1fr; }
+  .doc-preview { padding: 22px 16px; }
 }
 
 /* Backdrop dla sidebaru na mobile */

@@ -101,7 +101,7 @@ App.views.dashboard = (function () {
         const k = kontr.find(function (c) { return c.id === z.zleceniodawcaId; });
         return '<div class="flex between items-center" style="padding:10px 0;border-bottom:1px solid var(--border-soft)">' +
           '<div><div class="t-strong">' + U.esc(z.numer) + '</div>' +
-            '<div class="muted small">' + U.esc(k ? k.nazwa : "—") + ' · ' + U.formatPLN(z.fracht ? z.fracht.sprzedaz : 0) + '</div></div>' +
+            '<div class="muted small">' + U.esc(k ? k.nazwa : "—") + ' · ' + U.formatMoney(z.fracht ? z.fracht.sprzedaz : 0, z.fracht ? z.fracht.waluta : "PLN") + '</div></div>' +
           '<button class="btn btn-sm btn-primary" data-fakturuj="' + z.id + '">Wystaw fakturę</button>' +
         '</div>';
       }).join("") + '</div>';

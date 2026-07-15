@@ -115,7 +115,7 @@ App.print = (function () {
             (s.bank ? '<p><b>Bank:</b> ' + U.esc(s.bank) + '</p>' : "") +
           '</div>' +
           '<div class="box"><h4>Rozliczenie</h4>' +
-            '<p><b>Do zapłaty:</b> ' + money(doZaplaty > 0 ? doZaplaty : sumy.brutto) + '</p>' +
+            '<p><b>Do zapłaty:</b> ' + money(Math.max(doZaplaty, 0)) + '</p>' +
             (zaplacono > 0 ? '<p><b>Zapłacono:</b> ' + money(zaplacono) + '</p>' : "") +
             (f.uwagi ? '<p style="color:#555">' + U.esc(f.uwagi) + '</p>' : "") +
           '</div>' +

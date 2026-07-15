@@ -82,6 +82,23 @@ App.store = (function () {
     if (!db.liczniki.zlecenia) db.liczniki.zlecenia = {};
     if (!db.liczniki.faktury) db.liczniki.faktury = {};
     ["kontrahenci", "zlecenia", "faktury"].forEach(function (k) { if (!Array.isArray(db[k])) db[k] = []; });
+    _odtworzLiczniki();
+  }
+
+  // Odtwarza liczniki numeracji z istniejących dokumentów (nigdy nie zmniejsza),
+  // aby po imporcie / utracie pola liczniki nie powstały zdublowane numery.
+  function _odtworzLiczniki() {
+    db.zlecenia.forEach(function (z) { _uwzglednijNumer(db.liczniki.zlecenia, z.numer); });
+    db.faktury.forEach(function (f) { _uwzglednijNumer(db.liczniki.faktury, f.numer); });
+  }
+  function _uwzglednijNumer(licznik, numer) {
+    if (!numer) return;
+    const parts = String(numer).split("/"); // PREFIX/NNNN/RRRR
+    if (parts.length < 3) return;
+    const seq = parseInt(parts[1], 10);
+    const rok = parseInt(parts[2], 10);
+    if (!isFinite(seq) || !isFinite(rok)) return;
+    if (!licznik[rok] || licznik[rok] < seq) licznik[rok] = seq;
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(db)); }
@@ -94,7 +111,10 @@ App.store = (function () {
   function exportJSON() { return JSON.stringify(db, null, 2); }
   function importJSON(text) {
     const parsed = JSON.parse(text);
-    if (!parsed || typeof parsed !== "object") throw new Error("Nieprawidłowy plik.");
+    if (Array.isArray(parsed) || !parsed || typeof parsed !== "object" ||
+        (!parsed.zlecenia && !parsed.faktury && !parsed.kontrahenci && !parsed.ustawienia)) {
+      throw new Error("Nieprawidłowy plik kopii — brak danych aplikacji.");
+    }
     db = parsed; _migruj(); save();
   }
 
@@ -120,25 +140,26 @@ App.store = (function () {
 
   /* ---------- Numeracja ---------- */
   function _rok() { return new Date().getFullYear(); }
-  function podejrzyjNumerZlecenia() {
-    const rok = _rok();
+  function _rokLub(rok) { rok = parseInt(rok, 10); return isFinite(rok) ? rok : _rok(); }
+  function podejrzyjNumerZlecenia(rok) {
+    rok = _rokLub(rok);
     const n = (db.liczniki.zlecenia[rok] || 0) + 1;
     return _formatNumer(db.ustawienia.zlecenie.prefix || "ZL", n, rok);
   }
-  function nadajNumerZlecenia() {
-    const rok = _rok();
+  function nadajNumerZlecenia(rok) {
+    rok = _rokLub(rok);
     const n = (db.liczniki.zlecenia[rok] || 0) + 1;
     db.liczniki.zlecenia[rok] = n;
     save();
     return _formatNumer(db.ustawienia.zlecenie.prefix || "ZL", n, rok);
   }
-  function podejrzyjNumerFaktury() {
-    const rok = _rok();
+  function podejrzyjNumerFaktury(rok) {
+    rok = _rokLub(rok);
     const n = (db.liczniki.faktury[rok] || 0) + 1;
     return _formatNumer(db.ustawienia.faktura.prefix || "FV", n, rok);
   }
-  function nadajNumerFaktury() {
-    const rok = _rok();
+  function nadajNumerFaktury(rok) {
+    rok = _rokLub(rok);
     const n = (db.liczniki.faktury[rok] || 0) + 1;
     db.liczniki.faktury[rok] = n;
     save();

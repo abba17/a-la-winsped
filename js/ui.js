@@ -26,12 +26,14 @@ App.ui = (function () {
   // openModal({title, subtitle, body(HTMLString), wide, footer(HTMLString), onMount(rootEl, close)})
   function openModal(opts) {
     const root = document.getElementById("modalRoot");
+    const prevFocus = document.activeElement; // element, do którego wrócimy po zamknięciu
+    const titleId = "modalTitle_" + U.uid("m");
     const back = document.createElement("div");
     back.className = "modal-back";
     back.innerHTML =
-      '<div class="modal ' + (opts.wide ? "wide" : "") + '" role="dialog" aria-modal="true">' +
+      '<div class="modal ' + (opts.wide ? "wide" : "") + '" role="dialog" aria-modal="true" aria-labelledby="' + titleId + '">' +
         '<div class="modal-head">' +
-          '<div><h2>' + U.esc(opts.title || "") + '</h2>' +
+          '<div><h2 id="' + titleId + '">' + U.esc(opts.title || "") + '</h2>' +
           (opts.subtitle ? '<div class="sub">' + U.esc(opts.subtitle) + '</div>' : "") + '</div>' +
           '<button class="icon-btn close" data-close aria-label="Zamknij">' +
             '<svg viewBox="0 0 24 24" class="ico"><path d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3l6.3 6.3 6.3-6.3z"/></svg>' +
@@ -42,18 +44,44 @@ App.ui = (function () {
       '</div>';
     root.appendChild(back);
 
+    function focusable() {
+      return Array.prototype.slice.call(back.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )).filter(function (el) { return el.offsetParent !== null; });
+    }
+
+    let zamkniety = false;
     function close() {
+      if (zamkniety) return;
+      zamkniety = true;
       back.style.animation = "none";
       back.style.opacity = "0";
       setTimeout(function () { back.remove(); }, 120);
       document.removeEventListener("keydown", onKey);
+      if (prevFocus && typeof prevFocus.focus === "function") { try { prevFocus.focus(); } catch (e) {} }
     }
-    function onKey(e) { if (e.key === "Escape") close(); }
+    function onKey(e) {
+      if (e.key === "Escape") { close(); return; }
+      if (e.key === "Tab") { // pułapka fokusu wewnątrz modala
+        const f = focusable();
+        if (!f.length) return;
+        const first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        else if (f.indexOf(document.activeElement) === -1) { e.preventDefault(); first.focus(); }
+      }
+    }
     document.addEventListener("keydown", onKey);
     back.addEventListener("mousedown", function (e) { if (e.target === back) close(); });
     back.querySelectorAll("[data-close]").forEach(function (b) { b.addEventListener("click", close); });
 
     if (typeof opts.onMount === "function") opts.onMount(back, close);
+
+    // Przeniesienie fokusu do modala (najpierw pierwsze pole, potem dowolny element)
+    const firstField = back.querySelector(".modal-body input, .modal-body select, .modal-body textarea");
+    const cel = firstField || focusable()[0];
+    if (cel) { try { cel.focus(); } catch (e) {} }
+
     return { el: back, close: close };
   }
 

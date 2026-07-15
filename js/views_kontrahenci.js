@@ -52,7 +52,7 @@ App.views.kontrahenci = (function () {
     if (btnPusty) btnPusty.addEventListener("click", function () { formularz(null); });
 
     const szukaj = document.getElementById("szukaj");
-    szukaj.addEventListener("input", U.debounce(function () { filtr.q = szukaj.value; render(el); szukaj.focus(); szukaj.setSelectionRange(szukaj.value.length, szukaj.value.length); }, 200));
+    szukaj.addEventListener("input", U.debounce(function () { filtr.q = szukaj.value; render(el); const s = document.getElementById("szukaj"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }, 200));
 
     el.querySelectorAll("[data-chip]").forEach(function (c) {
       c.addEventListener("click", function () { filtr.typ = c.getAttribute("data-chip"); render(el); });

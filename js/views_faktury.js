@@ -172,7 +172,7 @@ App.views.faktury = (function () {
       '<div class="panel">' +
         '<div class="form-grid">' +
           '<div class="section-head">Dane faktury</div>' +
-          ui.field({ name: "numer", label: "Numer faktury", value: edit ? f.numer : store.podejrzyjNumerFaktury(), hint: edit ? "" : "Zostanie nadany po zapisaniu." }) +
+          ui.field({ name: "numer", label: "Numer faktury", value: edit ? f.numer : store.podejrzyjNumerFaktury(parseInt(String(f.dataWystawienia || "").slice(0, 4), 10)), hint: edit ? "" : "Zostanie nadany po zapisaniu (wg roku daty wystawienia)." }) +
           ui.field({ name: "nabywcaId", label: "Nabywca", value: f.nabywcaId, type: "select", required: true,
             options: brakKlientow ? [{ value: "", label: "— brak klientów, dodaj w Kontrahentach —" }] : [{ value: "", label: "— wybierz —" }].concat(kli),
             hint: brakKlientow ? "Najpierw dodaj klienta w module Kontrahenci." : "" }) +
@@ -293,6 +293,8 @@ App.views.faktury = (function () {
     if (!pozycje.length || U.podsumujPozycje(pozycje).brutto <= 0) { ui.toast("Dodaj przynajmniej jedną pozycję z kwotą.", "err", "Brak pozycji"); bledy++; }
     if (bledy) return;
 
+    const btnZ = document.getElementById("zapisz"); if (btnZ) btnZ.disabled = true; // blokada podwójnego zapisu
+
     const klient = store.get("kontrahenci", d.nabywcaId);
     const obj = Object.assign({}, f, {
       status: f.status || "wystawiona",
@@ -306,7 +308,7 @@ App.views.faktury = (function () {
     });
 
     const noweId = !obj.id;
-    if (noweId) obj.numer = store.nadajNumerFaktury();
+    if (noweId) obj.numer = store.nadajNumerFaktury(parseInt(String(d.dataWystawienia || "").slice(0, 4), 10));
     const zapisana = store.upsert("faktury", obj);
 
     // Powiąż ze zleceniem (przy nowej fakturze)
@@ -331,7 +333,7 @@ App.views.faktury = (function () {
         (f.status !== "oplacona" && f.status !== "anulowana" ? '<button class="btn btn-primary" id="btnOplac">✓ Oznacz opłaconą</button>' : "") +
         '<button class="btn" id="btnDrukuj">' + ui.icons.print + 'Drukuj / PDF</button>' +
         '<a class="btn" href="#/faktury/' + f.id + '/edytuj">' + ui.icons.edit + 'Edytuj</a>' +
-        '<button class="btn btn-danger" id="btnUsun">' + ui.icons.trash + '</button>' +
+        '<button class="btn btn-danger" id="btnUsun" title="Usuń fakturę" aria-label="Usuń fakturę">' + ui.icons.trash + '</button>' +
       '</div>';
 
     el.innerHTML =
@@ -340,7 +342,7 @@ App.views.faktury = (function () {
           (zlecenie ? ' <a href="#/zlecenia/' + zlecenie.id + '" class="badge badge-slate" style="text-decoration:none">Zlecenie: ' + U.esc(zlecenie.numer) + '</a>' : "") +
         '</div>' + akcje +
       '</div>' +
-      '<div class="card card-pad" style="background:#fff">' +
+      '<div class="card" style="background:#fff;overflow-x:auto">' +
         App.print.podgladHtml(App.print.faktura(f, { returnHtml: true })) +
       '</div>';
 
